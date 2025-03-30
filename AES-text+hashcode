@@ -1,0 +1,46 @@
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+from Crypto.Random import get_random_bytes
+from Crypto.Hash import SHA256
+import base64
+
+def encrypt_text_with_hash(text, key):
+    if isinstance(text, str):
+        text_bytes = text.encode('utf-8')
+    else:
+        text_bytes = text
+    hash_obj = SHA256.new(text_bytes)
+    hash_digest = hash_obj.digest()
+    data_to_encrypt = text_bytes + hash_digest
+    iv = get_random_bytes(16)
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    ciphertext = cipher.encrypt(pad(data_to_encrypt, AES.block_size))
+    return {
+        'iv': base64.b64encode(iv).decode('utf-8'),
+        'ciphertext': base64.b64encode(ciphertext).decode('utf-8')
+    }
+
+def decrypt_and_verify(encrypted_data, key):
+    iv = base64.b64decode(encrypted_data['iv'])
+    ciphertext = base64.b64decode(encrypted_data['ciphertext'])
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    decrypted_data = unpad(cipher.decrypt(ciphertext), AES.block_size)
+    original_text = decrypted_data[:-32]
+    embedded_hash = decrypted_data[-32:]
+    hash_obj = SHA256.new(original_text)
+    calculated_hash = hash_obj.digest()
+    if not embedded_hash == calculated_hash:
+        raise ValueError("Hash verification failed! Data may have been tampered with.")
+    return original_text.decode('utf-8')
+
+if __name__ == "__main__":
+    encryption_key = get_random_bytes(32)
+    plaintext = "This is a secret message that needs protection and integrity verification."
+    encrypted = encrypt_text_with_hash(plaintext, encryption_key)
+    print(f"Encrypted data: {encrypted}")
+    try:
+        decrypted = decrypt_and_verify(encrypted, encryption_key)
+        print(f"Decrypted text: {decrypted}")
+        print("Hash verification successful!")
+    except ValueError as e:
+        print(f"Error: {e}")
