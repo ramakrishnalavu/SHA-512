@@ -1,0 +1,6 @@
+import hashlib
+def generate_sha512_hash(text):
+    """Generate SHA-512 hash for a given text."""
+    encoded_text = text.encode()  
+    sha512_hash = hashlib.sha512(encoded_text)  
+    return sha512_hash.hexdigest() 
