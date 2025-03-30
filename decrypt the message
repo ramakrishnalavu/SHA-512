@@ -1,0 +1,29 @@
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+from Crypto.Hash import SHA256
+import base64
+
+def decrypt_message(encrypted_data, key):
+    iv = base64.b64decode(encrypted_data['iv'])
+    ciphertext = base64.b64decode(encrypted_data['ciphertext'])
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    decrypted_data = unpad(cipher.decrypt(ciphertext), AES.block_size)
+    original_text = decrypted_data[:-32]
+    embedded_hash = decrypted_data[-32:]
+    hash_obj = SHA256.new(original_text)
+    calculated_hash = hash_obj.digest()
+    if embedded_hash != calculated_hash:
+        raise ValueError("Hash verification failed! Data may have been tampered with.")
+    return original_text.decode('utf-8')
+
+if __name__ == "__main__":
+    key = b'your-32-byte-encryption-key-here!!'
+    encrypted_message = {
+        'iv': 'base64_encoded_iv_here',
+        'ciphertext': 'base64_encoded_ciphertext_here'
+    }
+    try:
+        decrypted_text = decrypt_message(encrypted_message, key)
+        print(f"Decrypted message: {decrypted_text}")
+    except Exception as e:
+        print(f"Decryption failed: {e}")
